@@ -1,22 +1,15 @@
-export type Goal = '체중감량' | '근력강화' | '유연성' | '체력증진'
-export type Environment = '집' | '헬스장' | '야외'
+export * from './types'
+export * from './taxonomy'
+export * from './workout-database'
+export * from './recommendation-engine'
 
-export const GOALS: Goal[] = ['체중감량', '근력강화', '유연성', '체력증진']
-export const ENVIRONMENTS: Environment[] = ['집', '헬스장', '야외']
+export const GOALS = ['체중감량', '근력강화', '유연성', '체력증진'] as const
+export const ENVIRONMENTS = ['홈트', '헬스장', '야외'] as const
 
-export const SUGGESTED_DISLIKES = ['런닝', '버피', '줄넘기', '플랭크']
-export const SUGGESTED_BODY_PARTS = ['무릎', '허리', '어깨', '손목', '발목']
+export const SUGGESTED_DISLIKES = ['런닝', '버피', '줄넘기', '플랭크', '스쿼트', '턱걸이']
+export const SUGGESTED_BODY_PARTS = ['무릎', '허리', '어깨', '손목', '발목', '목']
 
-export type Recommendation = {
-  rank: number
-  name: string
-  reason: string
-  volume: string
-  caution: string
-  badges: string[]
-}
-
-export const MOCK_RECOMMENDATIONS: Recommendation[] = [
+export const MOCK_RECOMMENDATIONS = [
   {
     rank: 1,
     name: '수영 (자유형)',
@@ -31,7 +24,7 @@ export const MOCK_RECOMMENDATIONS: Recommendation[] = [
     reason: '하체 근력과 심폐지구력을 동시에 올릴 수 있어요.',
     volume: '20분 × 3세트',
     caution: '안장 높이를 낮추면 무릎 각도가 커져 부담이 늘어요.',
-    badges: ['집에서 가능', '하체 강화'],
+    badges: ['홈트 가능', '하체 강화'],
   },
   {
     rank: 3,
@@ -42,20 +35,3 @@ export const MOCK_RECOMMENDATIONS: Recommendation[] = [
     badges: ['무릎 부담 없음', '맨몸 운동'],
   },
 ]
-
-// 범위가 너무 넓은 부위 입력 → 세분화 제안
-export const BROAD_PARTS: Record<string, string[]> = {
-  다리: ['허벅지', '종아리', '발목'],
-  팔: ['어깨', '팔꿈치', '손목'],
-  상체: ['어깨', '가슴', '등'],
-  하체: ['허벅지', '종아리', '무릎'],
-}
-
-// 너무 세부적인 입력 → 넓히기 제안
-export const NARROW_PARTS: Record<string, string> = {
-  손목관절: '손목',
-  손목인대: '손목',
-  아킬레스건: '발목',
-  전방십자인대: '무릎',
-  요추4번: '허리',
-}

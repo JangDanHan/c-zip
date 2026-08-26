@@ -13,11 +13,13 @@ import {
   ENVIRONMENTS,
   SUGGESTED_DISLIKES,
   SUGGESTED_BODY_PARTS,
-  MOCK_RECOMMENDATIONS,
   BROAD_PARTS,
   NARROW_PARTS,
+  getRecommendations,
+  validateBodyPart,
   type Goal,
   type Environment,
+  type Recommendation,
 } from '@/lib/workout-data'
 
 type Phase = 'initial' | 'loading' | 'result' | 'empty'
@@ -34,6 +36,8 @@ export default function Page() {
   const [environment, setEnvironment] = useState<Environment | null>(null)
 
   const [phase, setPhase] = useState<Phase>('initial')
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [reRecommendCount, setReRecommendCount] = useState(0)
   const [notice, setNotice] = useState<Notice>(null)
   const [goalInvalid, setGoalInvalid] = useState(false)
   const [partInvalid, setPartInvalid] = useState(false)
@@ -47,56 +51,76 @@ export default function Page() {
     setPartInvalid(false)
   }
 
-  function runRecommend() {
+  function runRecommend(seedOffset = 0) {
     setPreview(null)
     clearNotices()
 
-    // 1. 미입력 검증
+    // 1. 미입력 검증 (PRD 5-1)
     if (!goal) {
       setGoalInvalid(true)
       setNotice({ variant: 'error', message: '운동 목표를 선택해주세요.' })
       return
     }
 
-    // 2. 범위가 너무 넓은 부위
-    const broad = bodyParts.find((p) => BROAD_PARTS[p])
-    if (broad) {
-      setPartInvalid(true)
-      setNotice({
-        variant: 'hint',
-        message: `'${broad}'는 범위가 넓어요. 아래에서 더 구체적으로 골라주세요.`,
-        suggestions: BROAD_PARTS[broad],
-      })
-      return
+    // 2. 범위가 너무 넓은 부위 (PRD 5-2)
+    for (const part of bodyParts) {
+      const val = validateBodyPart(part)
+      if (val.type === 'TOO_BROAD') {
+        setPartInvalid(true)
+        setNotice({
+          variant: 'hint',
+          message: `'${val.input}'는 범위가 넓어요. 아래에서 더 구체적으로 골라주세요.`,
+          suggestions: val.suggestions,
+        })
+        return
+      }
     }
 
-    // 3. 입력이 너무 세부적
-    const narrow = bodyParts.find((p) => NARROW_PARTS[p])
-    if (narrow) {
-      setPartInvalid(true)
-      setNotice({
-        variant: 'hint',
-        message: `입력이 너무 세부적이에요. '${NARROW_PARTS[narrow]}' 정도로 조금 더 넓게 입력해주세요.`,
-        suggestions: [NARROW_PARTS[narrow]],
-      })
-      return
+    // 3. 입력이 너무 세부적 (PRD 5-3)
+    for (const part of bodyParts) {
+      const val = validateBodyPart(part)
+      if (val.type === 'TOO_NARROW') {
+        setPartInvalid(true)
+        setNotice({
+          variant: 'hint',
+          message: `입력이 너무 세부적이에요. '${val.suggestedBroadPart}' 정도로 조금 더 넓게 입력해주세요.`,
+          suggestions: [val.suggestedBroadPart],
+        })
+        return
+      }
     }
 
-    // 4. 로딩 → 결과 / 결과 없음
+    // 4. 로딩 → 추천 실행 (PRD 4장 & 5-5)
     setPhase('loading')
     if (timer.current) clearTimeout(timer.current)
+    
     timer.current = setTimeout(() => {
-      // 피하고 싶은 부위가 너무 많으면 조건에 맞는 운동이 없다고 안내
-      if (bodyParts.length >= 4) {
+      const result = getRecommendations({
+        goal,
+        dislikes,
+        bodyParts,
+        environment: environment || '홈트',
+        seed: seedOffset,
+      })
+
+      if (result.success && result.recommendations.length > 0) {
+        setRecommendations(result.recommendations)
+        setPhase('result')
+      } else {
+        setRecommendations([])
         setPhase('empty')
         setNotice({
           variant: 'empty',
-          message: '조건에 맞는 운동을 찾지 못했어요. 피하고 싶은 부위를 줄여보시겠어요?',
+          message: result.message || '추천을 만들지 못했어요. 입력 내용을 다시 확인하고 입력해주세요.',
         })
-      } else {
-        setPhase('result')
       }
-    }, 1400)
+    }, 900)
+  }
+
+  function handleReRecommend() {
+    const nextSeed = reRecommendCount + 1
+    setReRecommendCount(nextSeed)
+    runRecommend(nextSeed)
   }
 
   function applySuggestion(value: string) {
@@ -256,7 +280,7 @@ export default function Page() {
         <div className="mt-6">
           <button
             type="button"
-            onClick={runRecommend}
+            onClick={() => runRecommend(0)}
             disabled={isLoading}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-sm transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -292,12 +316,12 @@ export default function Page() {
 
           {phase === 'result' && (
             <div className="flex flex-col gap-3">
-              {MOCK_RECOMMENDATIONS.map((item, i) => (
-                <ResultCard key={item.rank} item={item} index={i} />
+              {recommendations.map((item, i) => (
+                <ResultCard key={`${item.name}-${i}`} item={item} index={i} />
               ))}
               <button
                 type="button"
-                onClick={reset}
+                onClick={handleReRecommend}
                 className="mt-2 flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary active:scale-[0.99]"
               >
                 <RotateCcw className="size-4" />
@@ -311,7 +335,7 @@ export default function Page() {
               <EmptyState />
               <button
                 type="button"
-                onClick={reset}
+                onClick={() => runRecommend(0)}
                 className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary active:scale-[0.99]"
               >
                 <RotateCcw className="size-4" />
