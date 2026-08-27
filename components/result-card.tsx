@@ -63,6 +63,13 @@ export function ResultCard({
         <TriangleAlert className="mt-0.5 size-4 shrink-0" style={{ color: 'var(--warning)' }} />
         <span className="text-pretty">{item.caution}</span>
       </div>
+
+      {item.aiTip && (
+        <div className="mt-2 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/20 px-3 py-2 text-xs leading-relaxed text-primary">
+          <span className="font-semibold shrink-0">✨ AI 코칭 팁:</span>
+          <span className="text-pretty">{item.aiTip}</span>
+        </div>
+      )}
     </article>
   )
 }

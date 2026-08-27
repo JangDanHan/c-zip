@@ -39,6 +39,7 @@ export interface Recommendation {
   caution: string
   badges: string[]
   category?: string
+  aiTip?: string
 }
 
 export type BodyPartValidationResult =
@@ -53,6 +54,7 @@ export interface RecommendationRequest {
   bodyParts: string[]
   environment: Environment
   seed?: number
+  useAi?: boolean
 }
 
 export interface RecommendationResponse {
@@ -61,4 +63,6 @@ export interface RecommendationResponse {
   totalCandidates: number
   message?: string
   errorCode?: 'EMPTY_FIELD' | 'TOO_BROAD' | 'TOO_NARROW' | 'NO_MATCH' | 'DELAY'
+  isAiGenerated?: boolean
+  aiCoaching?: string
 }

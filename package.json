@@ -6,10 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test tests/engine.test.ts"
+    "test": "tsx --env-file=.env --test tests/engine.test.ts tests/gemini-api.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@google/genai": "^2.19.0",
     "@vercel/analytics": "1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

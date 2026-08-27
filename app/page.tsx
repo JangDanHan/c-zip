@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Dumbbell, Target, Ban, MapPin, HeartPulse, RotateCcw } from 'lucide-react'
+import { Dumbbell, Target, Ban, MapPin, HeartPulse, RotateCcw, Sparkles } from 'lucide-react'
 import { ChipGroup } from '@/components/chip-group'
 import { TagInput } from '@/components/tag-input'
 import { ResultCard } from '@/components/result-card'
@@ -20,6 +20,7 @@ import {
   type Goal,
   type Environment,
   type Recommendation,
+  type RecommendationResponse,
 } from '@/lib/workout-data'
 
 type Phase = 'initial' | 'loading' | 'result' | 'empty'
@@ -42,6 +43,8 @@ export default function Page() {
   const [goalInvalid, setGoalInvalid] = useState(false)
   const [partInvalid, setPartInvalid] = useState(false)
   const [preview, setPreview] = useState<PreviewKey | null>(null)
+  const [aiCoaching, setAiCoaching] = useState<string | null>(null)
+  const [useAi, setUseAi] = useState(true)
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -51,9 +54,10 @@ export default function Page() {
     setPartInvalid(false)
   }
 
-  function runRecommend(seedOffset = 0) {
+  async function runRecommend(seedOffset = 0) {
     setPreview(null)
     clearNotices()
+    setAiCoaching(null)
 
     // 1. 미입력 검증 (PRD 5-1)
     if (!goal) {
@@ -93,9 +97,55 @@ export default function Page() {
     // 4. 로딩 → 추천 실행 (PRD 4장 & 5-5)
     setPhase('loading')
     if (timer.current) clearTimeout(timer.current)
-    
-    timer.current = setTimeout(() => {
-      const result = getRecommendations({
+
+    try {
+      // 서버 API Route 호출 (Gemini AI 연동)
+      const res = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal,
+          dislikes,
+          bodyParts,
+          environment: environment || '홈트',
+          seed: seedOffset,
+          useAi,
+        }),
+      })
+
+      const data: RecommendationResponse = await res.json()
+
+      if (data.success && data.recommendations && data.recommendations.length > 0) {
+        setRecommendations(data.recommendations)
+        if (data.aiCoaching) {
+          setAiCoaching(data.aiCoaching)
+        }
+        setPhase('result')
+      } else {
+        // Fallback: 로컬 규칙 기반 엔진 재시도
+        const localFallback = getRecommendations({
+          goal,
+          dislikes,
+          bodyParts,
+          environment: environment || '홈트',
+          seed: seedOffset,
+        })
+
+        if (localFallback.success && localFallback.recommendations.length > 0) {
+          setRecommendations(localFallback.recommendations)
+          setPhase('result')
+        } else {
+          setRecommendations([])
+          setPhase('empty')
+          setNotice({
+            variant: 'empty',
+            message: data.message || localFallback.message || '추천을 만들지 못했어요. 입력 내용을 다시 확인하고 입력해주세요.',
+          })
+        }
+      }
+    } catch {
+      // 네트워크 장애 시 로컬 추천 엔진으로 완전 Fallback
+      const localResult = getRecommendations({
         goal,
         dislikes,
         bodyParts,
@@ -103,18 +153,18 @@ export default function Page() {
         seed: seedOffset,
       })
 
-      if (result.success && result.recommendations.length > 0) {
-        setRecommendations(result.recommendations)
+      if (localResult.success && localResult.recommendations.length > 0) {
+        setRecommendations(localResult.recommendations)
         setPhase('result')
       } else {
         setRecommendations([])
         setPhase('empty')
         setNotice({
           variant: 'empty',
-          message: result.message || '추천을 만들지 못했어요. 입력 내용을 다시 확인하고 입력해주세요.',
+          message: localResult.message || '추천을 만들지 못했어요. 입력 내용을 다시 확인하고 입력해주세요.',
         })
       }
-    }, 900)
+    }
   }
 
   function handleReRecommend() {
@@ -284,12 +334,13 @@ export default function Page() {
             disabled={isLoading}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-sm transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? '추천 중…' : '추천받기'}
+            <Sparkles className="size-5" />
+            {isLoading ? 'AI 맞춤 분석 및 추천 중…' : 'AI 맞춤 추천받기'}
           </button>
 
           <div className="mt-3 flex flex-col gap-3">
             {isLoading && (
-              <StatusMessage variant="loading" message="조금만 기다려주세요. 딱 맞는 운동을 찾고 있어요." />
+              <StatusMessage variant="loading" message="Gemini AI가 제약 조건을 분석하여 최적의 대체 운동을 찾고 있어요." />
             )}
             {notice && (
               <StatusMessage
@@ -316,6 +367,18 @@ export default function Page() {
 
           {phase === 'result' && (
             <div className="flex flex-col gap-3">
+              {aiCoaching && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-primary shadow-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-sm mb-1.5">
+                    <Sparkles className="size-4" />
+                    <span>Gemini AI 종합 맞춤 코칭</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground text-pretty">
+                    {aiCoaching}
+                  </p>
+                </div>
+              )}
+
               {recommendations.map((item, i) => (
                 <ResultCard key={`${item.name}-${i}`} item={item} index={i} />
               ))}
