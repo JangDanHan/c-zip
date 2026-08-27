@@ -56,29 +56,29 @@ export function StatusMessage({
       role="status"
       aria-live="polite"
       className={cn(
-        'animate-in fade-in slide-in-from-top-1 rounded-xl border px-4 py-3 text-sm duration-300',
+        'animate-in fade-in slide-in-from-top-1 rounded-lg border px-4 py-3 text-sm duration-300',
         style.box,
       )}
       style={inlineStyle}
     >
       <div className="flex items-start gap-2.5">
         <Icon
-          className={cn('mt-0.5 size-4 shrink-0', variant === 'loading' && 'animate-spin')}
+          className={cn('mt-0.5 size-4 shrink-0', variant === 'loading' && 'animate-spin text-[#0066FF]')}
           style={variant === 'hint' ? { color: 'var(--warning)' } : undefined}
         />
         <span className="font-medium leading-relaxed text-pretty">{message}</span>
       </div>
 
       {suggestions && suggestions.length > 0 && onSuggestion && (
-        <div className="mt-3 flex flex-wrap gap-1.5 pl-7">
+        <div className="mt-2.5 flex flex-wrap gap-1.5 pl-6">
           {suggestions.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => onSuggestion(s)}
-              className="rounded-full border border-current/30 bg-card px-3 py-1 text-xs font-semibold transition-all hover:brightness-95 active:scale-95"
+              className="rounded-lg border border-current/30 bg-white px-3 py-1 text-xs font-semibold shadow-xs transition-all hover:bg-slate-50 active:scale-95"
             >
-              {s}
+              + {s}
             </button>
           ))}
         </div>

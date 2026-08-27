@@ -36,12 +36,12 @@ export function ChipGroup<T extends string>({
             aria-checked={selected}
             onClick={() => onChange(option)}
             className={cn(
-              'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-150',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
-              'active:scale-[0.97]',
+              'rounded-lg border px-4 py-2.5 text-sm font-medium transition-all duration-200',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+              'active:scale-[0.98]',
               selected
-                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                : 'border-border bg-card text-foreground hover:border-primary/50 hover:bg-secondary',
+                ? 'border-primary bg-primary text-primary-foreground shadow-xs font-semibold'
+                : 'border-[#E0E0E0] bg-white text-foreground hover:border-primary/50 hover:bg-[#F8F9FF]',
             )}
           >
             {option}
